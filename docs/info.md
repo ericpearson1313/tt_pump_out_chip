@@ -9,7 +9,9 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
-Explain how your project works
+I like to start with a new chip design with a vision, in the form of a technical datasheet.
+
+datasheet page: ![Preliminary Datasheet](LPC_Datasheet.pdf)
 
 ## How to test
 
