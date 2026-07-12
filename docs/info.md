@@ -9,14 +9,25 @@ You can also include images in this folder and reference them in the markdown. E
 
 ## How it works
 
+Function: upon power up, and every 24hrs, chip turns on the pump, and using a current transformer (CT) measures the 6 Hz RMS current and observe a current drop indicating the tank has been emptied, or until a timeout has occured and then turn off the pump. Leds indicate status, and button allows starting a pump out operation at any time.
+
 I like to start with a new chip design with a vision, in the form of a technical datasheet.
 
 datasheet page: ![Preliminary Datasheet](LPC_Datasheet.pdf)
 
 ## How to test
 
-Explain how to use your project
+tests are run with 
+
+    make -B
 
 ## External hardware
 
-List external hardware used in your project (e.g. PMOD, LED display, etc), if any
+The chip is the control center for the pumpout controller. It connects to:
+
+    - a 2ch ADC with inputs from : ch0: Current Transformer (CT) and ch1: potentiometer
+    - 3 output to LEDs
+    - 3 inputs from configureation DIP switch
+    - 1 input from a push button
+    - 1 output to drive a NPN transistor which will engage a relay to power the pump.
+    
