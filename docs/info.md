@@ -13,7 +13,7 @@ Function: upon power up, and every 24hrs, chip turns on the pump, and using a cu
 
 I like to start with a new chip design with a vision, in the form of a technical datasheet.
 
-datasheet page: ![Preliminary Datasheet](LPC_Datasheet.pdf)
+datasheet page: [Preliminary Datasheet](LPC_Datasheet.pdf)
 
 ## How to test
 
