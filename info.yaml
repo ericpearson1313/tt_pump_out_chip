@@ -3,7 +3,7 @@ project:
   title:        "60 Hz RMS Pump-Out Controller"      # Project title
   author:       "Eric Pearson"      # Your name
   discord:      ""      # Your discord username, for communication and automatically assigning you a Tapeout role (optional)
-  description:  ""      # One line description of what your project does
+  description:  "60 Hz CT‑based automatic pump‑out controller ASIC"      # One line description of what your project does
   language:     "SystemVerilog" # other examples include SystemVerilog, Amaranth, VHDL, etc
   clock_hz:     48      # Clock frequency in Hz (or 0 if not applicable)
 
@@ -26,23 +26,23 @@ project:
 # This section is for the datasheet/website. Use descriptive names (e.g., RX, TX, MOSI, SCL, SEG_A, etc.).
 pinout:
   # Inputs
-  ui[0]: ""
-  ui[1]: ""
-  ui[2]: ""
-  ui[3]: ""
-  ui[4]: ""
+  ui[0]: "adc_sdin"
+  ui[1]: "button"
+  ui[2]: "period_sw"
+  ui[3]: "timeout_sw"
+  ui[4]: "setup_sw"
   ui[5]: ""
   ui[6]: ""
   ui[7]: ""
 
   # Outputs
-  uo[0]: ""
-  uo[1]: ""
-  uo[2]: ""
-  uo[3]: ""
-  uo[4]: ""
-  uo[5]: ""
-  uo[6]: ""
+  uo[0]: "adc_ncs"
+  uo[1]: "adc_clk"
+  uo[2]: "adc_sdout"
+  uo[3]: "time_led"
+  uo[4]: "fault_led"
+  uo[5]: "run_led"
+  uo[6]: "relay_out"
   uo[7]: ""
 
   # Bidirectional pins
