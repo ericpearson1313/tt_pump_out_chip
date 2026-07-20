@@ -18,6 +18,7 @@
 "R10","1K","Potentiometer_SMD:Potentiometer_Bourns_3224J_Horizontal","https://www.digikey.ca/en/products/detail/nidec-components/SM-42TW102/1632327","SM-42TW102CT-ND","1"
 "SW1","SW_DIP_x03","Button_Switch_SMD:SW_DIP_SPSTx03_Slide_6.7x9.18mm_W6.73mm_P2.54mm_LowProfile_JPin","","563-CFS-0300TACT-ND","1"
 "SW2","Start","myspace pcb:SW_SPST_HP03","https://www.digikey.ca/en/products/detail/nkk-switches/HP0315AFKP2-R/1242035?s=N4IgTCBcDaIMwDYAMBaMBWAnOlBGFAcgCIgC6AvkA","360-2595-1-ND","1"
+"TP1","GND","TestPoint:TestPoint_Keystone_5000-5004_Miniature","https://www.digikey.ca/en/products/detail/keystone-electronics/1037/315153","36-1037-ND","1"
 "U1","XS-LPC-01","myspace pcb:QFN-24-3x3mm","https://github.com/ericpearson1313/tt_pump_out_chip","~","1"
 "U2","MCP3202","Package_SO:MSOP-8_3x3mm_P0.65mm","https://ww1.microchip.com/downloads/aemDocuments/documents/APID/ProductDocuments/DataSheets/21034F.pdf","MCP3202-CI/MS-ND","1"
 "U3","NCP114ASN280T1G","Package_TO_SOT_SMD:SOT-23-5","https://www.digikey.ca/en/products/detail/onsemi/NCP114ASN280T1G/6560603","NCP114ASN280T1GOSCT-ND","1"

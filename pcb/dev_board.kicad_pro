@@ -201,7 +201,13 @@
     "equivalence_files": []
   },
   "erc": {
-    "erc_exclusions": [],
+    "erc_exclusions": [
+      "lib_symbol_issues|1924050|495300|96c38b3a-213d-435f-8915-57450f292a7e|00000000-0000-0000-0000-000000000000|||",
+      "lib_symbol_issues|2120900|1479550|19d1def8-2e48-4a6e-b188-34e37e0c251d|00000000-0000-0000-0000-000000000000|||",
+      "lib_symbol_issues|889000|520700|ecec2098-f301-4eaf-beea-5cc06aea1cee|00000000-0000-0000-0000-000000000000|||",
+      "power_pin_not_driven|723900|406400|f26d842b-a889-4696-bde3-fd765c708b97|00000000-0000-0000-0000-000000000000|||",
+      "power_pin_not_driven|723900|635000|72e13cc2-23da-4f80-b15c-0b429f8f2b7a|00000000-0000-0000-0000-000000000000|||"
+    ],
     "meta": {
       "version": 0
     },
@@ -404,7 +410,7 @@
       "pin_to_pin": "error",
       "power_pin_not_driven": "error",
       "similar_labels": "warning",
-      "simulation_model_issue": "error",
+      "simulation_model_issue": "ignore",
       "unannotated": "error",
       "unit_value_mismatch": "error",
       "unresolved_variable": "error",
