@@ -11,3 +11,9 @@ test/sim_build
 test/__pycache__/
 test/results.xml
 test/gate_level_netlist.v
+*.bak
+max10/db/.cmp.kpt
+max10/db/
+max10/incremental_db/
+pcb/dev_board-backups/dev_board-2026-07-10_114939.zip
+pcb/dev_board-backups/
