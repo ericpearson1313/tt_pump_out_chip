@@ -1,8 +1,13 @@
 ![](../../workflows/gds/badge.svg) ![](../../workflows/docs/badge.svg) ![](../../workflows/test/badge.svg) ![](../../workflows/fpga/badge.svg)
 
-# Tiny Tapeout Verilog Project Template
+# Tiny Tapeout Project: Liquid Pump Controller
 
-- [Read the documentation for project](docs/info.md)
+- [chip datasheet](docs/LPC_Datasheet.pdf)
+- [documentation for Tiny Tapeout chip](docs/info.md)
+- [documentation for Tiny Tapeout tests](docs/README.md)
+- [documentation for MAX10 development fpga](max10/fpga.md)
+- [documentation for forge production fpga](max10/fpga.md)
+- [documentation for the Development board](pcb/pcb.md)
 
 ## What is Tiny Tapeout?
 
