@@ -4,10 +4,10 @@
 
 - [chip datasheet](docs/LPC_Datasheet.pdf)
 - [documentation for Tiny Tapeout chip](docs/info.md)
-- [documentation for Tiny Tapeout tests](docs/README.md)
+- [documentation for Tiny Tapeout tests](test/README.md)
 - [documentation for MAX10 development fpga](max10/fpga.md)
 - [documentation for forge production fpga](max10/fpga.md)
-- [documentation for the Development board](pcb/pcb.md)
+- [documentation for the Dev board PCB](pcb/pcb.md)
 
 ## What is Tiny Tapeout?
 
