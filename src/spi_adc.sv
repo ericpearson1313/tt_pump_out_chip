@@ -114,10 +114,64 @@ module adc_spi_monitor
 	input  logic ad_miso,
 	
 	// ADC monitor outputs
-	output logic [11:0] dout, // parallel output
-	output logic chan, // Indicate chan 0 or 1
-    output logic strb // indicates start next chan, chan valid, Coincident with dval tbd.
+	output logic [11:0] dout0, // parallel output
+	output logic [11:0] dout1, // parallel output
+    output logic strobe
 );
+	// Parameters
+	parameter CLK_FREQ_HZ 			= 48000000; // Our ref clk
+	parameter SAMPLE_FREQ_HZ    	= 15000; // System selected
+	parameter CYC_PER_SAMPLE 		= 3200; // CLK_FREQ_HZ / SAMPLE_FREQ_HZ;
+	parameter ADC_CLK_HZ 			= 600000; // Device limited
+	parameter ADC_CLK_PER_SAMPLE 	= 40; // ADC_CLK_HZ / SAMPLE_FREQ_HZ adc clk cycles to read inputs 0 and 1
+	parameter CYC_PER_ADC_HALF_CYC 	= 40; // CLK_FREQ_HZ / ADC_CLK_HZ / 2
+	parameter CYC_PER_ADC_CYC 		= 80; // CLK_FREQ_HZ / ADC_CLK_HZ 
+	parameter HALF_ADC_CLK_PER_SAMPLE=80; // 2 * ADC_CLK_HZ / SAMPLE_FREQ_HZ adc clk cycles to read inputs 0 and 1
+
+	// How it works: (assume montonic transitions
+	// waits for nCS to fall, then monitors the 17 clock rising edges following
+	// 3rd edge indicates the channel, 6th throught 17th are the 12 data bits MSB first
+	// Latch and hold the parallel data and as recevied chan0 and chan1, strobe on chan1 latching
+
+	// detect edges
+	logic ncs_del, ncs_fall;
+	always_ff @(posedge clk) ncs_del <= ad_ncs;
+	assign ncs_fall = !ad_ncs & ncs_del;
+	logic clk_del, clk_rise;
+	always_ff @(posedge clk) clk_del <= ad_clk;
+	assign clk_rise = ad_clk & !clk_del;
+
+	// Count the states
+	// 0 is idle/ncs fall, 1-17 of clk rise after
+	logic [4:0] state; 
+	always_ff @(posedge clk) 
+		state <= ( reset ) ? 0 : ( ncs_fall ) ? 0 : ( clk_rise && state < 17 ) ? state + 1 : state;
+			
+	// Latch the channel from mosi
+	logic chan_reg;
+	always_ff @(posedge clk) 
+		chan_reg <= ( reset ) ? 0 : ( clk_rise && state == 2 ) ? ad_mosi : chan_reg;
+
+	// Shift in the data from miso, MSB first
+	logic [11:0] in_reg;
+	always_ff @(posedge clk) 
+		in_reg <= ( reset ) ? 0 : ( clk_rise ) ? { in_reg[10:0], ad_miso } : in_reg;
+
+	// Wait 1 clk after loading last bit
+	logic del_last;
+	always_ff @(posedge clk) 
+		del_last <= ( clk_rise && state == 16 ) ? 1'b1 : 1'b0;
+
+	// After loading last bit, copy to correct data output reg
+	always_ff @(posedge clk) begin
+		dout0 <= ( reset ) ? 0 : ( chan_reg == 0 && del_last ) ? in_reg : dout0;
+		dout1 <= ( reset ) ? 0 : ( chan_reg == 1 && del_last ) ? in_reg : dout1;
+	end
+
+	// Delay d1load to generate otuptu strobe
+	always_ff @(posedge clk) 
+		strobe <= ( chan_reg == 1 && del_last ) ? 1'b1 : 1'b0;
+	
 endmodule
 
 // This is the simulated ADC (MCP3202), Not general purpose
