@@ -176,6 +176,7 @@ endmodule
 
 // This is the simulated ADC (MCP3202), Not general purpose
 // SImualted only enough to work for this applicaiton.
+// Ideally Will be a part of any BIST logic, keep it small.
 // It has input ports for the parallel 12 bit data ports (0, 1)
 // The external interface may be asycnronous, however latency matters somewhat
 // This interface assumes exactly 1 ff between the core and the chip pin (IO flop) for all 4 signals.
@@ -198,5 +199,54 @@ module adc_spi_simulate
 	output logic strb0, // din0 was sampled
 	output logic strb1  // din1 was sampled
 );
+	// Parameters
+	parameter CLK_FREQ_HZ 			= 48000000; // Our ref clk
+	parameter SAMPLE_FREQ_HZ    	= 15000; // System selected
+	parameter CYC_PER_SAMPLE 		= 3200; // CLK_FREQ_HZ / SAMPLE_FREQ_HZ;
+	parameter ADC_CLK_HZ 			= 600000; // Device limited
+	parameter ADC_CLK_PER_SAMPLE 	= 40; // ADC_CLK_HZ / SAMPLE_FREQ_HZ adc clk cycles to read inputs 0 and 1
+	parameter CYC_PER_ADC_HALF_CYC 	= 40; // CLK_FREQ_HZ / ADC_CLK_HZ / 2
+	parameter CYC_PER_ADC_CYC 		= 80; // CLK_FREQ_HZ / ADC_CLK_HZ 
+	parameter HALF_ADC_CLK_PER_SAMPLE=80; // 2 * ADC_CLK_HZ / SAMPLE_FREQ_HZ adc clk cycles to read inputs 0 and 1
+
+// This needs to behave like the adc istself as far as our master above needs
+// when CS is high we output miso = 0;
+// We watch for CS to fall, and can count clock rise edges, 
+// sample the correct channel on the 3rd rise from mosi;
+// on the falling clock after the 4th rise output miso 0,
+// Then for the next 12 falling clocks shift output bitgs 11 to 0;
+// output is set to 0 whenever CS is high.
+
+	// detect edges
+	logic ncs_del, ncs_fall;
+	always_ff @(posedge clk) ncs_del <= ad_ncs;
+	assign ncs_fall = !ad_ncs & ncs_del;
+	logic clk_del, clk_rise, clk_fall;
+	always_ff @(posedge clk) clk_del <= ad_clk;
+	assign clk_rise = ad_clk & !clk_del;
+	assign clk_fall = !ad_clk & clk_del;
+
+	// Count the states
+	// 0 is idle/ncs fall, 1-17 of clk rise after
+	logic [4:0] state; 
+	always_ff @(posedge clk) 
+		state <= ( reset ) ? 0 : ( ncs_fall ) ? 0 : ( clk_rise && state < 17 ) ? state + 1 : state;
+
+	// Latch the channel from mosi
+	logic chan_reg;
+	always_ff @(posedge clk) 
+		chan_reg <= ( reset ) ? 0 : ( clk_rise && state == 2 ) ? ad_mosi : chan_reg;
+
+	// sreg load from chan, and shift out
+	logic [11:0] sreg;
+	always_ff @(posedge clk) 
+		sreg <= ( reset ) ? 0 : ( ad_ncs ) ? 0 :
+                                ( clk_rise && state == 2 && chan_reg == 0 ) ? din0 :
+		                        ( clk_rise && state == 2 && chan_reg == 1 ) ? din1 :
+								( clk_fall && state >= 5 ) ? { sreg[10:0], 1'b0 } : sreg;
+
+	// assign output miso 
+	assign ad_mosi = sreg[11];
+
 endmodule
 
