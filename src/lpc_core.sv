@@ -62,6 +62,14 @@ module lpc_core (
     	.strb( sstrb ) // indicates start of channel 
 	);
 
+	// Test shift registers
+	logic [11:0] sreg, data0, data1;
+	always_ff @(posedge clk) begin
+		sreg <= (reset)?0:(sdval)?{sreg[10:0],sdata}:sreg;
+		data0 <= (reset)?0:(sstrb&&schan)?sreg:data0;
+		data1 <= (reset)?0:(sstrb&&!schan)?sreg:data1;
+	end
+
 	////////////////
 	// Debounce
 	////////////////
