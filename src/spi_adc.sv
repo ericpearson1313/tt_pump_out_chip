@@ -2,7 +2,7 @@
 /////////////////////////////////////////////////////////////
 // Interface modules for MCP3202 12-bit spi adc.
 /////////////////////////////////////////////////////////////
-// 3 perspectives: Master, Monitor, Simulator. 
+// 3 perspectives: Master, Monitor, Slave
 // With these 3 blocks all anchored on the 4 I/O pins (spi)
 // They are targetted at the LPC chip. They will be used for:
 // emulation, monitoring, simlation fpga accelleration, 
@@ -246,7 +246,7 @@ module adc_spi_simulate
 								( clk_fall && state >= 5 ) ? { sreg[10:0], 1'b0 } : sreg;
 
 	// assign output miso 
-	assign ad_mosi = sreg[11];
+	assign ad_miso = sreg[11];
 
 endmodule
 

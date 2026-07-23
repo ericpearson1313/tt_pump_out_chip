@@ -34,7 +34,7 @@ module lpc_core (
     // ADC inteface
 	////////////////
 
-	// ADC I/O Regs
+	// ADC I/O Regs (TODO move up out of core to chip top)
 	logic ncs_io, clk_io, mosi_io, miso_io; 
 	// Output IO regs
 	always_ff @(posedge clk) adc_ncs <= ncs_io;

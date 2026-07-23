@@ -1,3 +1,4 @@
+// vim: ts=4:
 /*
  * Copyright (c) 2024 Your Name
  * SPDX-License-Identifier: Apache-2.0
@@ -23,6 +24,8 @@ module tt_um_pump_out(
 
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, uio_in, ui_in[7:5], 1'b0};
+
+	// TODO Add I/O Regs in this layer
   
   // Instantate and connect core logic to the TT I/O
 
