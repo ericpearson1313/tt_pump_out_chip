@@ -7,6 +7,7 @@ FST ?= -fst # Use more efficient FST format
 TOPLEVEL_LANG ?= verilog
 SRC_DIR = $(PWD)/../src
 PROJECT_SOURCES = project.v lpc_core.sv spi_adc.sv cordic.sv
+TESTBENCH_SOURCES = spi_adc.sv cordic.sv
 
 ifneq ($(GATES),yes)
 
@@ -25,6 +26,7 @@ COMPILE_ARGS    += -DSIM
 COMPILE_ARGS    += -DUNIT_DELAY=\#1
 VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/primitives.v
 VERILOG_SOURCES += $(PDK_ROOT)/sky130A/libs.ref/sky130_fd_sc_hd/verilog/sky130_fd_sc_hd.v
+VERILOG_SOURCES += $(addprefix $(SRC_DIR)/,$(TESTBENCH_SOURCES))
 
 # this gets copied in by the GDS action workflow
 VERILOG_SOURCES += $(PWD)/gate_level_netlist.v
