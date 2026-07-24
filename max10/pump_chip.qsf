@@ -187,10 +187,6 @@ set_location_assignment PIN_101 -to time_led
 set_location_assignment PIN_62 -to setup_sw
 set_location_assignment PIN_100 -to run_led
 set_location_assignment PIN_124 -to pump_out
-set_location_assignment PIN_132 -to adc_ncs
-set_location_assignment PIN_65 -to adc_mosi
-set_location_assignment PIN_106 -to adc_miso
-set_location_assignment PIN_105 -to adc_clk
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to timeout_sw
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to time_led
 set_instance_assignment -name IO_STANDARD "3.3-V LVTTL" -to setup_sw
