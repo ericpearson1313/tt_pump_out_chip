@@ -34,15 +34,6 @@ module lpc_core (
     // ADC inteface
 	////////////////
 
-	// ADC I/O Regs (TODO move up out of core to chip top)
-	logic ncs_io, clk_io, mosi_io, miso_io; 
-	// Output IO regs
-	always_ff @(posedge clk) adc_ncs <= ncs_io;
-	always_ff @(posedge clk) adc_clk <= clk_io;
-	always_ff @(posedge clk) adc_mosi<= mosi_io;
-	// Input IO reg
-	always_ff @(posedge clk) miso_io <= adc_miso;
-
 	// ADC serial interface
 	logic sdata, schan, sdval, sstrb;
 	adc_spi_master i_adcif (
@@ -51,10 +42,10 @@ module lpc_core (
     	.reset	( reset ),
     	// External A/D Converter 
     	// Assumed 1 external I/O reg on each.
-    	.ad_ncs	( ncs_io ),
-    	.ad_clk	( clk_io ),
-    	.ad_mosi( mosi_io ),
-    	.ad_miso( miso_io ),
+    	.ad_ncs	( adc_ncs ),
+    	.ad_clk	( adc_clk ),
+    	.ad_mosi( adc_mosi ),
+    	.ad_miso( adc_miso ),
     	// ADC monitor outputs
     	.dout( sdata ), // serial output
     	.chan( schan ), // Indicate chan 0 or 1

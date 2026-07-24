@@ -25,11 +25,22 @@ module tt_um_pump_out(
   // List all unused inputs to prevent warnings
   wire _unused = &{ena, uio_in, ui_in[7:5], 1'b0};
 
-	// TODO Add I/O Regs in this layer
-  
-  // Instantate and connect core logic to the TT I/O
+	// I/O Regs in this layer
+ 
+	wire ncs_io, clk_io, mosi_io;
+	reg ncs_reg, clk_reg, mosi_reg;
+	reg miso_io; 
+	always @(posedge clk) ncs_reg <= ncs_io;
+	always @(posedge clk) clk_reg <= clk_io;
+	always @(posedge clk) mosi_reg<= mosi_io;
+	always @(posedge clk) miso_io <= ui_in[0]; 
+	assign uo_out[0] = ncs_reg;
+	assign uo_out[1] = clk_reg;	
+	assign uo_out[2] = mosi_reg;	
+	
+	// Instantate and connect core logic to the TT I/O
 
-  lpc_core i_core (
+	lpc_core i_core (
 		// System
 		.clk			( clk ),
 		.reset 		( !rst_n ),
@@ -43,10 +54,10 @@ module tt_um_pump_out(
 		.run_led		( uo_out[5] ),
 		.pump_out	( uo_out[6] ),
 		// ADC Interface
-		.adc_ncs    ( uo_out[0] ),
-		.adc_clk		( uo_out[1] ),
-		.adc_mosi	( uo_out[2] ),
-		.adc_miso	( ui_in[0]  )
+		.adc_ncs    ( ncs_io ),
+		.adc_clk		( clk_io ),
+		.adc_mosi	( mosi_io ),
+		.adc_miso	( miso_io  )
 	);
 
   

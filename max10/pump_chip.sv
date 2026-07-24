@@ -27,10 +27,10 @@ module pump_chip
 	input  logic timeout_sw,
 
 	// ADC I/O (spi)
-	output logic adc_ncs,
-	output logic adc_clk,
-	input  logic adc_miso,
-	output logic adc_mosi,
+	//output logic adc_ncs, // pin 132
+	//output logic adc_clk, // pin 105
+	//input  logic adc_miso, // pin 106
+	//output logic adc_mosi, // pin 65
 
 	////////////
 	// DEBUG IO
@@ -61,6 +61,13 @@ module pump_chip
 	input logic clk_in,	 // Reference 48Mhz or other
 	input logic reset_n
 );
+
+	// ADC is internally emulated in the code. Not I/O in this case
+	logic adc_ncs;
+	logic adc_clk;
+	logic adc_miso;
+	logic adc_mosi;
+
 
 	logic [4:0] key; // keypad, bit 4 indicates pressed
 
@@ -133,39 +140,145 @@ module pump_chip
 	wire ac_thresh;
 	wire signed [11:0] ac_acc;	
 	wire signed [11:0] dc_acc;	
+
+	// Register ADC I/O
+		
+	wire ncs_io, clk_io, mosi_io, miso_io; 
+	always @(posedge clk) adc_ncs <= ncs_io;
+	always @(posedge clk) adc_clk <= clk_io;
+	always @(posedge clk) adc_mosi <= mosi_io;
+	always @(posedge clk) miso_io <= adc_miso; 
 	
+	// PUMP Chip CORE emulation/test
+  lpc_core i_core (
+		// System
+		.clk			( clk ),
+		.reset 		( reset ),
+		// Dig IO
+		.button		( button ),
+		.setup_sw	( setup_sw ),
+		.period_sw	( period_sw ),
+		.timeout_sw	( timeout_sw ),
+		.time_led	( time_led ),
+		.fault_led	( fault_led ),
+		.run_led		( run_led ),
+		.pump_out	( pump_out ),
+		// ADC Interface
+		.adc_ncs    ( ncs_io ),
+		.adc_clk		( clk_io ),
+		.adc_mosi	( mosi_io ),
+		.adc_miso	( miso_io )
+	);
+
+  	//////////////////////
+  	//////////////////////
+	//
+  	// ADC System Simulation
+	//
+  	/////////////////////
+  	//////////////////////
+
+  	/////////////////////
+	// 60 Hz sin/cos cordic
+  	/////////////////////
+
+	// create /16 sample flag
+	reg [3:0] sample_count;
+	wire sample_flag;
+	always @(posedge clk)
+		sample_count <= ( reset ) ? 0 : sample_count + 1;
+	assign sample_flag = ( sample_count == 15 ) ? 1'b1 : 1'b0;
 	
-	// TT PUMP Chip emulation/test
-  
-	tt_um_pump_out user_project (
-		// system
-      .clk    (clk),      	 // clock
-      .rst_n  (!reset),     // not reset      
-		// Tiny Tapeout IO
-		.ui_in  (ui_in),    // Dedicated inputs
-      .uo_out (uo_out),   // Dedicated outputs
-		.uio_out (uio_out), // BiDir IO
-		.uio_oe  (uio_oe ),
-		.uio_in (uio_in)
-		);
+	// Create the -pi/2 to pi/2 angle sweep
+    reg signed [15:0] angle;
+    always @(posedge clk) begin
+        if( reset ) begin
+            angle <= -12500;
+        end else if ( sample_flag ) begin
+            angle <= ( angle == 12499 ) ? -12500 : angle + 1;
+        end
+    end
+
+	// create polarity correction
+    reg polarity;
+    always @(posedge clk) begin
+        if( reset ) begin
+            polarity <= 1;
+        end else if ( sample_flag ) begin
+            polarity <= ( angle == 12499 ) ? !polarity : polarity;
+        end
+    end
+
+	// Cordic 50K point = 2*PI
+    wire [15:0] sin_out, cos_out;
+    cordic_sincos_50000_core_20 i_tb_sin(
+        .clk( clk ),
+        .rst( reset ),
+        .start( sample_flag ),
+        .angle_in( angle ),
+        .sin_out ( sin_out ),
+        .cos_out ( cos_out ),
+        .valid( ),
+        .busy( )
+    );
+
+	// Corect polarity
+   	wire [15:0] cos_pol, sin_pol;
+    assign cos_pol = ( polarity ) ? ~cos_out : cos_out;
+    assign sin_pol = ( polarity ) ? ~sin_out : sin_out;
+	// scale 3/8 so peaks at +/-1544, about 75% full scale
+    wire [11:0] cos3x, sin3x;
+    assign cos3x = cos_pol[15-:12] + { cos_pol[15], cos_pol[15-:11] };
+    assign sin3x = sin_pol[15-:12] + { sin_pol[15], sin_pol[15-:11] };
+
+  	/////////////////////
+	// ADC device Simulation
+  	/////////////////////
+
+    wire [11:0] din0, din1;
+	wire sstrb0, sstrb1;
 	
-	// Connect up TT to fpga I/O
-	
-	assign adc_ncs		= uo_out[0];
-	assign adc_clk		= uo_out[1];
-	assign adc_mosi	= uo_out[2];
-	assign time_led 	= uo_out[3];
-	assign fault_led 	= uo_out[4];
-	assign run_led 	= uo_out[5];
-	assign pump_out 	= uo_out[6];
-	
-	
-	assign ui_in[0] = adc_miso;
-	assign ui_in[1] = button;
-	assign ui_in[4] = setup_sw;
-	assign ui_in[2] = period_sw;
-	assign ui_in[3] = timeout_sw;
-	assign ui_in[7:5] = 3'b000;
+    adc_spi_simulate i_adc_sim (
+        // Input clock,
+        .clk    ( clk    ),
+        .reset  ( reset ),
+        // External A/D Converter 
+        .ad_ncs ( adc_ncs ),
+        .ad_clk ( adc_clk ),
+        .ad_mosi( adc_mosi ),
+        .ad_miso( adc_miso ),
+        // ADC monitor outputs
+        .din0( din0 ), // serial output
+        .din1( din1 ), // serial output
+        .strb0( sstrb0 ), // indicateds data sampled
+        .strb1( sstrb1 ) 
+    );
+
+	assign din0 = cos3x;
+	assign din1 = sin3x;
+
+  	/////////////////////
+	// ADC Monitor
+  	/////////////////////
+
+    wire [11:0] dout0, dout1;
+	wire mstrobe;
+    adc_spi_monitor i_adc_mon (
+        // Input clock,
+        .clk    ( clk    ),
+        .reset  ( reset ),
+        // External A/D Converter 
+        .ad_ncs ( adc_ncs ),
+        .ad_clk ( adc_clk ),
+        .ad_mosi( adc_mosi ),
+        .ad_miso( adc_miso ),
+        // ADC monitor outputs
+        .dout0( dout0 ), // serial output
+        .dout1( dout1 ), // serial output
+        .strobe( mstrobe ) // indicates dout1 was updated
+    );
+
+
 	
 	//////////////////////////////
    // HDMI Scope input connections
