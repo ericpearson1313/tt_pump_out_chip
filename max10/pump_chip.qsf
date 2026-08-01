@@ -185,10 +185,11 @@ set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to button
 set_instance_assignment -name WEAK_PULL_UP_RESISTOR ON -to period_sw
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to fault_led
 set_instance_assignment -name IO_STANDARD "3.3-V LVCMOS" -to period_sw
+set_global_assignment -name SYSTEMVERILOG_FILE ../src/cordic.sv
+set_global_assignment -name SYSTEMVERILOG_FILE ../test/pump_model.sv
 set_global_assignment -name QIP_FILE ufm_flash/synthesis/ufm_flash.qip
 set_global_assignment -name SDC_FILE pump_chip.sdc
 set_global_assignment -name SYSTEMVERILOG_FILE ../src/spi_adc.sv
-set_global_assignment -name SYSTEMVERILOG_FILE ../src/lpc_core.sv
 set_global_assignment -name VERILOG_FILE lib/bvfifo.v
 set_global_assignment -name QIP_FILE lib/bvfifo.qip
 set_global_assignment -name VERILOG_FILE lib/adc_fifo.v

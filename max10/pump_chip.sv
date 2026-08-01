@@ -13,24 +13,24 @@ module pump_chip
 	/////////////
 
 	// Input Buttons
-	input  logic button, 	// pin 140, lpc_13_gp0
+	output logic button, 	// pin 140, lpc_13_gp0
 
 	// Output LED/SPK
-	output logic time_led, 	// pin 101, lpc_2_gp11
-	output logic fault_led, // pin 99 , lpc_3_gp12
-	output logic run_led, 	// pin 100, lpc_4_gp13
-	output logic pump_out, 	// pin 124, lpc_24_gp9
+	input  logic time_led, 	// pin 101, lpc_2_gp11
+	input  logic fault_led, // pin 99 , lpc_3_gp12
+	input  logic run_led, 	// pin 100, lpc_4_gp13
+	input  logic pump_out, 	// pin 124, lpc_24_gp9
 
 	// External Current Control Input
-	input	 logic setup_sw,  // pin 62 , lpc_20_gp7
-	input  logic period_sw, // pin 135, lpc_23_gp8
-	input  logic timeout_sw,// pin 66 , lpc_1_gp10
+	output logic setup_sw,  // pin 62 , lpc_20_gp7
+	output logic period_sw, // pin 135, lpc_23_gp8
+	output logic timeout_sw,// pin 66 , lpc_1_gp10
 
 	// ADC I/O (spi)
-	output logic adc_ncs,  	// pin 132, lpc_9_gp18
-	output logic adc_clk,  	// pin 105, lpc_6_gp15
-	input  logic adc_miso, 	// pin 106, lpc_7_gp16
-	output logic adc_mosi, 	// pin 65 , lpc_8_gp17
+	input  logic adc_ncs,  	// pin 132, lpc_9_gp18
+	input  logic adc_clk,  	// pin 105, lpc_6_gp15
+	output logic adc_miso, 	// pin 106, lpc_7_gp16
+	input  logic adc_mosi, 	// pin 65 , lpc_8_gp17
 
 	////////////
 	// DEBUG IO
@@ -126,24 +126,6 @@ module pump_chip
 	assign anain[8:5] = count[24:21];
 	assign anain[8]=count[24];
 
-	/////////////////////////////////
-	/////////////////////////////////
-	////
-	////  Pump Chip (DUT) 
-	////
-	/////////////////////////////////
-	/////////////////////////////////
-	
-	// Wire up the inputs and outputs:
-
-	reg [7:0] ui_in;
-	reg [7:0] uio_in;
-	wire [7:0] uio_out;
-	wire [7:0] uio_oe;
-	wire [7:0] uo_out;
-
-	assign uio_in = 0; // tie off unused inputs
-	
   // Fpga probes
 
 	logic [31:0] fpga_probe;	
@@ -151,37 +133,81 @@ module pump_chip
 	logic [11:0] fpga_probe3;	
 	
 
-	// Register ADC I/O
-		
-	wire ncs_io, clk_io, mosi_io, miso_io; 
-	always @(posedge clk) adc_ncs <= ncs_io;
-	always @(posedge clk) adc_clk <= clk_io;
-	always @(posedge clk) adc_mosi <= mosi_io;
-	always @(posedge clk) miso_io <= adc_miso; 
-	
-	// PUMP Chip CORE emulation/test
-  lpc_core i_core (
-		// System
-		.clk			( clk ),
-		.reset 		( reset ),
-		.fpga_probe ( fpga_probe ),
-		.fpga_probe2 ( fpga_probe2 ),
-		// Dig IO
-		.button		( button ),
-		.setup_sw	( setup_sw ),
-		.period_sw	( period_sw ),
-		.timeout_sw	( timeout_sw ),
-		.time_led	( time_led ),
-		.fault_led	( fault_led ),
-		.run_led		( run_led ),
-		.pump_out	( pump_out ),
-		// ADC Interface
-		.adc_ncs    ( ncs_io ),
-		.adc_clk		( clk_io ),
-		.adc_mosi	( mosi_io ),
-		.adc_miso	( miso_io )
-	);
+  	//////////////////////
+  	//////////////////////
+	//
+  	// ADC System Simulation
+	//
+  	/////////////////////
+  	//////////////////////
 
+	
+	// Test Inputs
+	always_comb begin
+		// Defautls
+		button = 1;
+		setup_sw = 1;
+		period_sw = 1;
+		timeout_sw = 1;
+	end
+	
+	/////////////////////
+	// Pump System Model
+  	/////////////////////
+
+	// 4 Hz (or 60 Hz for 15x faster that realtime
+	logic [23:0] tick_cnt;
+	always_ff @(posedge clk) 
+		tick_cnt <= ( reset ) ? 0 : ( tick_cnt == (48000000 / 60) - 1 ) ? 0 : tick_cnt + 1;
+	logic sys_tick;
+	always_ff @(posedge clk) 
+		sys_tick <=  ( tick_cnt == (48000000 / 60) - 1 ) ? 1'b1 : 1'b0 ;	// 15x faster realtime
+		//tick <=  ( tick_cnt == (48000000 / 4 ) - 1 ) ? 1'b1 : 1'b0 ; 	// Realtime
+
+	logic signed [11:0] sys_ct;
+	pump_model 
+	#(
+		.SP_STALL ( 12'sd1200  ),	// >= 15 amps rms (1103)
+		.SP_RUN 	 ( 12'sd735   ),	// typical 10 amps rms (753)
+		.SP_EMPTY ( 12'sd600   ),	// empty under 9 amps rms (663)
+		.SP_OFF	 ( 12'sd7 	  )	// Off still ac noise 0.1 amps rms (7)
+	) i_pump (
+		// System
+		.clk		( clk ),
+		.reset	( reset ),
+		.tick		( sys_tick ),// 250ms in sim step time. 
+		.fpga_probe ( fpga_probe3 ),
+		.pump_out( pump_out ),	// signal to turn on pump
+		.ct		( sys_ct ),	// range +/-2000 is +/-30 Amps isntantaneous (typicaol 10Amp RMS = +/-15Amps
+		.empty	( 1'b0 ), 	// change setpoint to empty current if not start current
+		.stall	( 1'b0 ), 	// change to the stall current (or keep it in stall after start)
+		.n_empty	( 1'b0 ) 	// change to the normal curretn (if not start current
+	);	
+	
+	
+	
+  	/////////////////////
+	// ADC device Simulation
+  	/////////////////////
+
+
+	wire sstrb0, sstrb1;
+	
+    adc_spi_simulate i_adc_sim (
+        // Input clock,
+        .clk    ( clk    ),
+        .reset  ( reset ),
+        // External A/D Converter 
+        .ad_ncs ( adc_ncs ),
+        .ad_clk ( adc_clk ),
+        .ad_mosi( adc_mosi ),
+        .ad_miso( adc_miso ),
+        // ADC monitor outputs
+        .din0( sys_ct ), // adc input signed for sim input
+        .din1( 663 ), // 663 for 9Amp
+        .strb0( sstrb0 ), // indicateds data sampled
+        .strb1( sstrb1 ) 
+    );
 
 
   	/////////////////////

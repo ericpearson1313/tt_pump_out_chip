@@ -71,7 +71,7 @@ module pump_model
         .cos_out ( cos_out ),
         .valid( ),
         .busy( )
-    );
+		 );
 
 	// Corect polarity
    wire [15:0] cos_pol, sin_pol;
