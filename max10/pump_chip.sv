@@ -13,24 +13,24 @@ module pump_chip
 	/////////////
 
 	// Input Buttons
-	//input  logic button, // pin 140
+	input  logic button, 	// pin 140, lpc_13_gp0
 
 	// Output LED/SPK
-	//output logic time_led, // pin 101
-	//output logic fault_led, // pin 99
-	//output logic run_led, // pin 100
-	//output logic pump_out, // pin 124
+	output logic time_led, 	// pin 101, lpc_2_gp11
+	output logic fault_led, // pin 99 , lpc_3_gp12
+	output logic run_led, 	// pin 100, lpc_4_gp13
+	output logic pump_out, 	// pin 124, lpc_24_gp9
 
 	// External Current Control Input
-	//input	 logic setup_sw,  // pin 62 
-	//input  logic period_sw,  // pin 135
-	//input  logic timeout_sw, // pin 66 
+	input	 logic setup_sw,  // pin 62 , lpc_20_gp7
+	input  logic period_sw, // pin 135, lpc_23_gp8
+	input  logic timeout_sw,// pin 66 , lpc_1_gp10
 
 	// ADC I/O (spi)
-	//output logic adc_ncs,  // pin 132
-	//output logic adc_clk,  // pin 105
-	//input  logic adc_miso, // pin 106
-	//output logic adc_mosi, // pin 65 
+	output logic adc_ncs,  	// pin 132, lpc_9_gp18
+	output logic adc_clk,  	// pin 105, lpc_6_gp15
+	input  logic adc_miso, 	// pin 106, lpc_7_gp16
+	output logic adc_mosi, 	// pin 65 , lpc_8_gp17
 
 	////////////
 	// DEBUG IO
@@ -63,18 +63,19 @@ module pump_chip
 );
 
 	// all I/O is internally emulated in the code as we are a full simulation
-	logic adc_ncs;   	// pin 132
-	logic adc_clk;   	// pin 105
-	logic adc_miso;  	// pin 106
-	logic adc_mosi;  	// pin 65 
-	logic setup_sw;  	// pin 62 
-	logic period_sw; 	// pin 135
-	logic timeout_sw;	// pin 66 
-	logic button; 		// pin 140
-	logic time_led; 	// pin 101
-	logic fault_led; 	// pin 99
-	logic run_led; 	// pin 100
-	logic pump_out; 	// pin 124
+	// for emulation thes are tied to actual chip I/O as we are emulating a chip
+	//logic adc_ncs;   	// pin 132
+	//logic adc_clk;   	// pin 105
+	//logic adc_miso;  	// pin 106
+	//logic adc_mosi;  	// pin 65 
+	//logic setup_sw;  	// pin 62 
+	//logic period_sw; 	// pin 135
+	//logic timeout_sw;	// pin 66 
+	//logic button; 		// pin 140
+	//logic time_led; 	// pin 101
+	//logic fault_led; 	// pin 99
+	//logic run_led; 	// pin 100
+	//logic pump_out; 	// pin 124
 
 
 
@@ -181,81 +182,7 @@ module pump_chip
 		.adc_miso	( miso_io )
 	);
 
-  	//////////////////////
-  	//////////////////////
-	//
-  	// ADC System Simulation
-	//
-  	/////////////////////
-  	//////////////////////
 
-	
-	// Test Inputs
-	always_comb begin
-		// Defautls
-		button = 1;
-		setup_sw = 1;
-		period_sw = 1;
-		timeout_sw = 1;
-	end
-	
-	/////////////////////
-	// Pump System Model
-  	/////////////////////
-
-	// 4 Hz (or 60 Hz for 15x faster that realtime
-	logic [23:0] tick_cnt;
-	always_ff @(posedge clk) 
-		tick_cnt <= ( reset ) ? 0 : ( tick_cnt == (48000000 / 60) - 1 ) ? 0 : tick_cnt + 1;
-	logic sys_tick;
-	always_ff @(posedge clk) 
-		sys_tick <=  ( tick_cnt == (48000000 / 60) - 1 ) ? 1'b1 : 1'b0 ;	// 15x faster realtime
-		//tick <=  ( tick_cnt == (48000000 / 4 ) - 1 ) ? 1'b1 : 1'b0 ; 	// Realtime
-
-	logic signed [11:0] sys_ct;
-	pump_model 
-	#(
-		.SP_STALL ( 12'sd1200  ),	// >= 15 amps rms (1103)
-		.SP_RUN 	 ( 12'sd735   ),	// typical 10 amps rms (753)
-		.SP_EMPTY ( 12'sd600   ),	// empty under 9 amps rms (663)
-		.SP_OFF	 ( 12'sd7 	  )	// Off still ac noise 0.1 amps rms (7)
-	) i_pump (
-		// System
-		.clk		( clk ),
-		.reset	( reset ),
-		.tick		( sys_tick ),// 250ms in sim step time. 
-		.fpga_probe ( fpga_probe3 ),
-		.pump_out( pump_out ),	// signal to turn on pump
-		.ct		( sys_ct ),	// range +/-2000 is +/-30 Amps isntantaneous (typicaol 10Amp RMS = +/-15Amps
-		.empty	( 1'b0 ), 	// change setpoint to empty current if not start current
-		.stall	( 1'b0 ), 	// change to the stall current (or keep it in stall after start)
-		.n_empty	( 1'b0 ) 	// change to the normal curretn (if not start current
-	);	
-	
-	
-	
-  	/////////////////////
-	// ADC device Simulation
-  	/////////////////////
-
-
-	wire sstrb0, sstrb1;
-	
-    adc_spi_simulate i_adc_sim (
-        // Input clock,
-        .clk    ( clk    ),
-        .reset  ( reset ),
-        // External A/D Converter 
-        .ad_ncs ( adc_ncs ),
-        .ad_clk ( adc_clk ),
-        .ad_mosi( adc_mosi ),
-        .ad_miso( adc_miso ),
-        // ADC monitor outputs
-        .din0( sys_ct ), // adc input signed for sim input
-        .din1( 663 ), // 663 for 9Amp
-        .strb0( sstrb0 ), // indicateds data sampled
-        .strb1( sstrb1 ) 
-    );
 
   	/////////////////////
 	// ADC Monitor
