@@ -1,7 +1,7 @@
 // 128 column, 60 rows.  Even lines are ascii. Odd lines are color code, 0-F, <blank also 0>
 //-------------|---------------|---------------|---------------|---------------|---------------|---------------|---------------|
-  LPC Liquid Pump Controller MAX10 Platform
-  444R4444444444444444444444
+  LPC Liquid Pump Emulator  MAX10 Platform
+  444R444444444444222222224455555555555555
 
 
                     
