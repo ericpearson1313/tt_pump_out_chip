@@ -1,7 +1,8 @@
 // vim: ts=4:
 `timescale 1ns / 1ps
-module pump_chip
+// LPC Tester FPGA.
 
+module pump_chip
 #(
 	// Parameter Declarations
 	parameter UNIQ_ID = 32'h0000_0000
@@ -164,6 +165,11 @@ module pump_chip
 		sys_tick <=  ( tick_cnt == (48000000 / 60) - 1 ) ? 1'b1 : 1'b0 ;	// 15x faster realtime
 		//tick <=  ( tick_cnt == (48000000 / 4 ) - 1 ) ? 1'b1 : 1'b0 ; 	// Realtime
 
+	// CC pump out
+	logic [1:0] pump_out_cc;
+	always_ff @(posedge clk) 
+			pump_out_cc <= { pump_out_cc[0], pump_out };
+			
 	logic signed [11:0] sys_ct;
 	pump_model 
 	#(
@@ -177,14 +183,12 @@ module pump_chip
 		.reset	( reset ),
 		.tick		( sys_tick ),// 250ms in sim step time. 
 		.fpga_probe ( fpga_probe3 ),
-		.pump_out( pump_out ),	// signal to turn on pump
+		.pump_out( pump_out_cc[1] ),	// signal to turn on pump
 		.ct		( sys_ct ),	// range +/-2000 is +/-30 Amps isntantaneous (typicaol 10Amp RMS = +/-15Amps
 		.empty	( 1'b0 ), 	// change setpoint to empty current if not start current
 		.stall	( 1'b0 ), 	// change to the stall current (or keep it in stall after start)
 		.n_empty	( 1'b0 ) 	// change to the normal curretn (if not start current
 	);	
-	
-	
 	
   	/////////////////////
 	// ADC device Simulation
@@ -192,16 +196,22 @@ module pump_chip
 
 
 	wire sstrb0, sstrb1;
+	wire adc_ncs_int, adc_clk_int, adc_mosi_int, adc_miso_int;
+	// I/O Regs
+	always @(posedge clk) adc_ncs_int <= adc_ncs;
+	always @(posedge clk) adc_clk_int <= adc_clk;
+	always @(posedge clk) adc_mosi_int <= adc_mosi;
+	always @(posedge clk) adc_miso <= adc_miso_int;
 	
     adc_spi_simulate i_adc_sim (
         // Input clock,
         .clk    ( clk    ),
         .reset  ( reset ),
         // External A/D Converter 
-        .ad_ncs ( adc_ncs ),
-        .ad_clk ( adc_clk ),
-        .ad_mosi( adc_mosi ),
-        .ad_miso( adc_miso ),
+        .ad_ncs ( adc_ncs_int ),
+        .ad_clk ( adc_clk_int ),
+        .ad_mosi( adc_mosi_int ),
+        .ad_miso( adc_miso_int ),
         // ADC monitor outputs
         .din0( sys_ct ), // adc input signed for sim input
         .din1( 663 ), // 663 for 9Amp
@@ -221,10 +231,10 @@ module pump_chip
         .clk    ( clk    ),
         .reset  ( reset ),
         // External A/D Converter 
-        .ad_ncs ( adc_ncs ),
-        .ad_clk ( adc_clk ),
-        .ad_mosi( adc_mosi ),
-        .ad_miso( adc_miso ),
+        .ad_ncs ( adc_ncs_int ),
+        .ad_clk ( adc_clk_int ),
+        .ad_mosi( adc_mosi_int ),
+        .ad_miso( adc_miso_int ),
         // ADC monitor outputs
         .dout0( dout0 ), // signed for mon output
         .dout1( dout1 ), // signed for mon output
@@ -328,8 +338,8 @@ module pump_chip
 	
 	// Fast scope Inputs
 	assign fast_clk = clk_out; //(6mhz)
-	assign fast_cs = adc_ncs; // triggered on rising edge
-	assign fast_data = { adc_ncs, adc_clk, adc_mosi, adc_miso }; // bottom to top
+	assign fast_cs = adc_ncs_int; // triggered on rising edge
+	assign fast_data = { adc_ncs_int, adc_clk_int, adc_mosi_int, adc_miso_int }; // bottom to top
 	
 	/////////////////////////////////
 	////
