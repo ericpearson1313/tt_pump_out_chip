@@ -195,10 +195,10 @@ module pump_chip
         .clk    ( clk    ),
         .reset  ( reset ),
         // External A/D Converter 
-        .ad_ncs ( adc_ncs_io ),
-        .ad_clk ( adc_clk_io ),
-        .ad_mosi( adc_mosi_io ),
-        .ad_miso( adc_miso_io ),
+        .ad_ncs ( ncs_io ),
+        .ad_clk ( clk_io ),
+        .ad_mosi( mosi_io ),
+        .ad_miso( miso_io ),
         // ADC monitor outputs
         .dout0( dout0 ), // signed for mon output
         .dout1( dout1 ), // signed for mon output
@@ -302,8 +302,8 @@ module pump_chip
 	
 	// Fast scope Inputs
 	assign fast_clk = clk_out; //(6mhz)
-	assign fast_cs = adc_ncs_io; // triggered on rising edge
-	assign fast_data = { adc_ncs_io, adc_clk_io, adc_mosi_io, adc_miso_io }; // bottom to top
+	assign fast_cs = ncs_io; // triggered on rising edge
+	assign fast_data = { ncs_io, clk_io, mosi_io, miso_io }; // bottom to top
 	
 	/////////////////////////////////
 	////
