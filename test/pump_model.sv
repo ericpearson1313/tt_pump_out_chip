@@ -1,3 +1,4 @@
+// vim: ts=4:
 // A plant model of the pump and system for simulation
 // In this case it is for runnig on the MAX 10 simulation accelerator, so is synthesizable.
 // Tests run externally, and feed parameters to the model which is active whenever pump_out = 1;
@@ -8,9 +9,9 @@ module pump_model
 	#(
 
 		parameter SP_STALL 	= 12'sd1103 ,		// >= 15 amps rms
-		parameter SP_RUN 		= 12'sd735  ,			// typical 10 amps rms
+		parameter SP_RUN 	= 12'sd735  ,			// typical 10 amps rms
 		parameter SP_EMPTY 	= 12'sd663  ,		// empty say 9 amps rms
-		parameter SP_OFF		= 12'sd7 			// Off still ac noise 0.1 amps rms
+		parameter SP_OFF	= 12'sd7 			// Off still ac noise 0.1 amps rms
 	) (
 		// System
 		input logic clk,
@@ -87,7 +88,7 @@ module pump_model
 	logic signed [11:0] ct_scale_sp;
 	logic signed [11:0] sp_auto;
 	logic signed [21:0] ct_scale;
-	assign ct_scale_sp = ( !pump_out ) ? SP_OFF : ( empty ) ? SP_EMPTY : ( n_empty ) ? SP_RUN : ( stall ) ? SP_STALL : sp_auto;
+	assign ct_scale_sp = ( !pump_out ) ? SP_OFF : ( sp_auto == SP_STALL ) ? SP_STALL : ( empty ) ? SP_EMPTY : ( n_empty ) ? SP_RUN : ( stall ) ? SP_STALL : sp_auto;
 	
 	// ct_scale goes to the setpoint by 1 each cycle
 	// moves at 800 stgeps pr 60 Hz cycle
@@ -111,9 +112,9 @@ module pump_model
    always @(posedge clk) 	
 		pump_time <= ( reset ) ? 0 : ( !pump_out ) ? 0 : ( tick ) ? pump_time + 1 : pump_time;
 		
-	assign sp_auto = 	( pump_time >= 1 && pump_time <= 4 	) ? SP_STALL :
-							( pump_time >  4 && pump_time <= 40 ) ? SP_RUN :
-							( pump_time > 40                    ) ? SP_EMPTY : SP_OFF;
+	assign sp_auto = 	( pump_out && pump_time <= 4 	) ? SP_STALL :
+						( pump_time >  4 && pump_time <= 40 ) ? SP_RUN :
+						( pump_time > 40                    ) ? SP_EMPTY : SP_OFF;
 	
 	
 
