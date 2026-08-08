@@ -161,9 +161,9 @@ set_global_assignment -name VERILOG_MACRO "__ALTERA_STD__=<None>"
 set_location_assignment PIN_99 -to fault_led
 set_location_assignment PIN_135 -to period_sw
 set_location_assignment PIN_66 -to timeout_sw
-set_location_assignment PIN_101 -to time_led
+set_location_assignment PIN_100 -to time_led
 set_location_assignment PIN_62 -to setup_sw
-set_location_assignment PIN_100 -to run_led
+set_location_assignment PIN_101 -to run_led
 set_location_assignment PIN_124 -to pump_out
 set_location_assignment PIN_132 -to adc_ncs
 set_location_assignment PIN_65 -to adc_mosi
