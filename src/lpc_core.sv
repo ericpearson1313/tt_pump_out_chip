@@ -1,7 +1,11 @@
 // vim: ts=4:
 // The LPC Core.
 // Wrapped by chip specific warapepr (ie project.,v)
-module lpc_core (
+module lpc_core # (
+   	// Physical parametersdd
+	parameter NUM_SAMPLE = 250, // 3750 for real time, 250 for 16x
+	parameter MAX_RMS 	 = 1103 // max 15A RMS = 1103 current threshold
+) (
 	// System
 	input logic clk,
 	input logic reset,
@@ -24,16 +28,7 @@ module lpc_core (
 	output logic adc_mosi,  // shift data input to adc
 	 input logic adc_miso 	// shift data output from adc
 );
-   	// Physical parameters
-	parameter NUM_SAMPLE = 250 * 1; // samples to accumulate mult of 250 per 60hz cycle
-	parameter MAX_RMS 	= 1103; 	// max RMS current
 
-	// TT tie-off (to be removed)
-	reg [15:0] xstate;
-	always_ff @(posedge clk) 
-		xstate <= ( reset ) ? 0 : xstate + &{ clk, reset, button, period_sw, timeout_sw, setup_sw, adc_miso };
-	//assign { time_led, fault_led, run_led, pump_out } = xstate;
-    
 	////////////////
     // ADC inteface
 	////////////////
@@ -74,8 +69,7 @@ module lpc_core (
 	////////////////
 	
 	logic button_debounce; 
-	logic long_button;
-	forge_debounce #(48) i_bounc(.clk(clk),.reset(reset),.in(button),.out(button_debounce),.long(long_button));
+	forge_debounce #(48) i_bounc(.clk(clk),.reset(reset),.in(!button),.out(button_debounce),.out_pulse(),.long());
 
 	////////////////
     // RMS Compute
@@ -235,15 +229,23 @@ module lpc_core (
 	always @(posedge clk)
 		win_cnt <= 	( reset ) ? 0 : 
 					( button_debounce || pump_out ) ? 0 : 
-                   	( win_tick && win_cnt == 19'h54600 ) ? 0 : 
+               ( win_tick && ( win_cnt == (19'h54600 - 1 ))) ? 0 : 
 					( win_tick ) ? win_cnt + 1 : win_cnt;
 	
 	// Modulate life led based on 24hr countdown (fast as time gets closer)
 	// Say pick the given Hz-ish range bit, ghiher and higher freq as the upper bits decrement
+	logic [5:0] toggle;
+	assign toggle = ( NUM_SAMPLE == 3750 ) ? { win_cnt[3-:4], sample_count[11-:2] } :
+					( NUM_SAMPLE == 250  ) ? win_cnt[7-:6] : 8'b0 ;
 	always @(posedge clk)
 		time_led <= ( reset ) ? 0 :
-					( setup_sw ) ?  win_cnt[~win_cnt[18-:3]] : 
-					( !setup_sw && !win_tick ) ? ct_lt_ref : time_led;
+					( setup_sw && win_cnt[18-:3] == 0 ) ? toggle[5] :
+					( setup_sw && win_cnt[18-:3] == 1 ) ? toggle[4] :
+					( setup_sw && win_cnt[18-:3] == 2 ) ? toggle[3] :
+					( setup_sw && win_cnt[18-:3] == 3 ) ? toggle[2] :
+					( setup_sw && win_cnt[18-:3] == 4 ) ? toggle[1] :
+					( setup_sw && win_cnt[18-:3] == 5 ) ? toggle[0] :
+					( !setup_sw && win_tick ) ? !ct_lt_ref : time_led;
 	
 	// Over Current Logic
 	// 4 sec 15amp
@@ -268,9 +270,9 @@ module lpc_core (
 	// Signal end when done.
 
 	logic [12:0] timesel;
-	assign timesel = 	( period_sw &&  timeout_sw ) ? 3*60*4 : // 3 min
-							(!period_sw &&  timeout_sw ) ? 6*60*4 : // 6 min
-							( period_sw && !timeout_sw ) ?12*60*4 : // 12 min
+	assign timesel = 	( period_sw && !timeout_sw ) ? 3*60*4 : // 3 min
+							( period_sw &&  timeout_sw ) ? 6*60*4 : // 6 min
+							(!period_sw && !timeout_sw ) ?12*60*4 : // 12 min
 																	24*60*4 ; // 24 min
 
 	logic [12:0] timeout_cnt;
@@ -296,7 +298,18 @@ module lpc_core (
 	always @(posedge clk) 
 		ufl_flag <= ( reset ) ? 0 : 
 					( !pump_out ) ? 0 :
-					( timeout_cnt >= 8 && ltref_last && ct_lt_ref && win_tick ) ? 1 : ufl_flag;
+					( timeout_cnt >= 5 && ltref_last && ct_lt_ref && win_tick ) ? 1 : ufl_flag;
+					
+	// Short cycle / Empty fault
+	// Pumped for too short of time (~4sec)
+	// If we are not pumping at the 4 sec time after start. Its too short.
+	
+	logic short_cycle; // 
+	always @(posedge clk) 
+		short_cycle <= ( reset ) ? 0 :
+							( !pump_out ) ? 0 :
+							( pump_out && win_tick && timeout_cnt == 0 ) ? 1 : // assume it will be a short cycle
+							( pump_out && win_tick && timeout_cnt >= 16 ) ? 0 : short_cycle; // runnign and Timeout_cnt >= 4 sec, means we're not short cycled
 					
 	// Pump Cycle Logic
 	// first rule, pump led follows pump output, 
@@ -318,12 +331,13 @@ module lpc_core (
 					( pump_out ) ? 0 : // clear on pump on
 					( fault == 0 && ovl_flag ) ? 2 : // over current
 					( fault == 0 && timeout  ) ? 1  : // timeout
+					( fault == 0 && short_cycle ) ? 3 : // Empty tank
 								   fault;
 	always @(posedge clk) 
 		fault_led <= ( reset ) ? 0 : 
 					( !setup_sw ) ? ((win_tick) ? ct_lt_ref : fault_led) :
 					( pump_out ) ? 0 :
-					( fault != 0 && win_cnt[2:0] == 0 || fault == 2 && win_cnt[2:0] == 2 ) ? 1'b1 : 1'b0;
+					( fault != 0 && win_cnt[2:0] == 0 || fault >= 2 && win_cnt[2:0] == 2 || fault == 3 && win_cnt[2:0] == 4 ) ? 1'b1 : 1'b0;
 
 	// Auto mode
 	// In auto pump output is (re)started by pressing the button or 24hr ellapse
@@ -341,9 +355,10 @@ module lpc_core (
 	always @(posedge clk) 
 		pump_out <= ( reset ) ? 0 :
 					( button_debounce ) ? 1 : 
-					( auto == 2 ) ? 1 : 
 					( !setup_sw && !button_debounce ) ? 0 :
-					( ovl_flag || ufl_flag || timeout ) ? 0 : pump_out;
+					( auto == 2 ) ? 1 : 
+					( win_tick && ( win_cnt == (19'h54600 - 1 ))) ? 1 :
+					( ovl_flag || ufl_flag || timeout ) ? 0 : pump_out; // short_cycle specifically not in this list!
 
 	// Run Led follows pump output
 	always @(posedge clk)
@@ -355,7 +370,8 @@ module forge_debounce(
     input clk,
     input reset,
     input in,
-    output out, // fixed pulse 15ms after 5ms pressure
+    output out_pulse, // fixed pulse 15ms after 5ms pressure
+	 output out, // Follow input with asymetric 5/100 debouncing
     output long // after fire held for > 2/3 sec, until release
     );
 
@@ -397,7 +413,8 @@ module forge_debounce(
         end
     end
 
-    assign out = (state == S_WAIT_PULSE) ? 1'b1 : 1'b0;
+    assign out_pulse = (state == S_WAIT_PULSE) ? 1'b1 : 1'b0;
+	 assign out = ( state != S_IDLE && state != S_WAIT_PRESS ) ? 1'b1 : 1'b0;
     assign long = (state == S_LONG || state == S_WAIT_LOFF) ? 1'b1 : 1'b0;
 
     // Counters
