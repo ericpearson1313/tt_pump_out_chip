@@ -159,11 +159,12 @@ module pump_chip
 	// 4 Hz (or 60 Hz for 15x faster that realtime
 	logic [23:0] tick_cnt;
 	always_ff @(posedge clk) 
-		tick_cnt <= ( reset ) ? 0 : ( tick_cnt == (48000000 / 60) - 1 ) ? 0 : tick_cnt + 1;
+		//tick_cnt <= ( reset ) ? 0 : ( tick_cnt == (48000000 / 60) - 1 ) ? 0 : tick_cnt + 1;
+		tick_cnt <= ( reset ) ? 0 : ( tick_cnt == (48000000 / 4) - 1 ) ? 0 : tick_cnt + 1;
 	logic sys_tick;
 	always_ff @(posedge clk) 
-		sys_tick <=  ( tick_cnt == (48000000 / 60) - 1 ) ? 1'b1 : 1'b0 ;	// 15x faster realtime
-		//tick <=  ( tick_cnt == (48000000 / 4 ) - 1 ) ? 1'b1 : 1'b0 ; 	// Realtime
+		//sys_tick <=  ( tick_cnt == (48000000 / 60) - 1 ) ? 1'b1 : 1'b0 ;	// 15x faster realtime
+		sys_tick <=  ( tick_cnt == (48000000 / 4 ) - 1 ) ? 1'b1 : 1'b0 ; 	// Realtime
 
 	// CC pump out
 	logic [1:0] pump_out_cc;
