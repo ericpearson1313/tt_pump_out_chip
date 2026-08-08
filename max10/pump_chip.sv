@@ -160,7 +160,9 @@ module pump_chip
 	always @(posedge clk) miso_io <= adc_miso; 
 	
 	// PUMP Chip CORE emulation/test
-  lpc_core i_core (
+	lpc_core #(
+		.NUM_SAMPLE( 3750 )
+	) i_core (
 		// System
 		.clk			( clk ),
 		.reset 		( reset ),
