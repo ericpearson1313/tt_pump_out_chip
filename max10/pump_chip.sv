@@ -13,7 +13,7 @@ module pump_chip
 	/////////////
 
 	// Input Buttons
-	output logic button, 	// pin 140, lpc_13_gp0
+	input  logic button, 	// pin 140, lpc_13_gp0
 
 	// Output LED/SPK
 	input  logic time_led, 	// pin 101, lpc_2_gp11
